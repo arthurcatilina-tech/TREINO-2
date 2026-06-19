@@ -221,6 +221,21 @@ select.hsel{background:var(--bg2);border:1px solid var(--bd);border-radius:var(-
 .bw-date-input{width:100%;height:48px;padding:0 12px;font-size:13px;font-family:var(--font);background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r2);color:var(--txt);outline:none;-webkit-appearance:none;color-scheme:dark;cursor:pointer}
 .bw-save-btn{height:48px;padding:0 20px;background:linear-gradient(135deg,var(--gn),#00A862);color:#000;border:none;border-radius:var(--r2);font-size:14px;font-weight:700;font-family:var(--font);cursor:pointer;white-space:nowrap;flex-shrink:0}
 .bw-save-btn:active{transform:scale(.96)}
+
+/* CARDIO BLOCK */
+.cardio-block{background:var(--bg1);border:1px solid var(--bd);border-radius:var(--r);padding:16px;margin:0 20px 12px}
+.cardio-title{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--mt);margin-bottom:14px}
+.cardio-title::before{content:'';display:block;width:8px;height:8px;border-radius:50%;background:var(--bl);box-shadow:0 0 6px var(--bl)}
+.cardio-row{display:flex;gap:10px}
+.cardio-field{flex:1}
+.cardio-lbl{font-size:10px;font-weight:500;color:var(--mt);margin-bottom:5px;letter-spacing:.04em}
+.cardio-inp{width:100%;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r3);height:40px;color:var(--txt);font-family:var(--mono);font-size:16px;padding:0 12px;outline:none;-webkit-appearance:none;text-align:center}
+.cardio-inp:focus{border-color:var(--bl)}
+.cardio-intensity{display:flex;gap:6px;margin-top:12px}
+.ci-btn{flex:1;height:34px;border-radius:var(--r3);border:1px solid var(--bd);background:var(--bg2);color:var(--mt);font-size:11px;font-weight:600;font-family:var(--font);cursor:pointer;transition:all .15s;letter-spacing:.03em}
+.ci-btn.on-low{background:rgba(61,142,240,.15);border-color:var(--bl);color:var(--bl)}
+.ci-btn.on-med{background:rgba(255,184,0,.15);border-color:var(--gold);color:var(--gold)}
+.ci-btn.on-high{background:rgba(255,77,28,.15);border-color:var(--ac);color:var(--ac)}
 .bw-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px}
 .bw-list{display:flex;flex-direction:column;gap:6px}
 .bw-row{display:flex;justify-content:space-between;align-items:center;background:var(--bg1);border:1px solid var(--bd);border-radius:var(--r2);padding:12px 14px}
@@ -381,6 +396,25 @@ select.hsel{background:var(--bg2);border:1px solid var(--bd);border-radius:var(-
     </div>
     <div id="lhint"></div>
     <div id="excards"></div>
+    <div class="cardio-block" id="cardio-block">
+      <div class="cardio-title">Cardio</div>
+      <div class="cardio-row">
+        <div class="cardio-field">
+          <div class="cardio-lbl">Duração (min)</div>
+          <input class="cardio-inp" id="cardio-min" type="number" inputmode="numeric" placeholder="0" min="0" max="180">
+        </div>
+        <div class="cardio-field">
+          <div class="cardio-lbl">Tipo</div>
+          <input class="cardio-inp" id="cardio-type" type="text" placeholder="Esteira, bike..." style="font-family:var(--font);font-size:14px;text-align:left;padding:0 10px">
+        </div>
+      </div>
+      <div class="cardio-lbl" style="margin-top:12px">Intensidade</div>
+      <div class="cardio-intensity">
+        <button class="ci-btn" id="ci-low"  onclick="setCI('low')" >Leve</button>
+        <button class="ci-btn" id="ci-med"  onclick="setCI('med')" >Média</button>
+        <button class="ci-btn" id="ci-high" onclick="setCI('high')">Alta</button>
+      </div>
+    </div>
     <div class="btm-btns">
       <button class="btn btn-ghost" onclick="cancel()">Cancelar</button>
       <button class="btn btn-primary" onclick="save2()">Salvar treino ✓</button>
@@ -480,7 +514,8 @@ const TPL={
       {name:'Supino reto barra',type:'normal',range:'4-8'}
     ]},
     {g:'Costas',ex:[
-      {name:'Barra fixa pronada',type:'normal',range:'6-10'}
+      {name:'Barra fixa pronada',type:'normal',range:'6-10'},
+      {name:'Remada em pé',type:'normal',range:'8-12'}
     ]},
     {g:'Ombros',ex:[
       {name:'Desenvolvimento halteres',type:'normal',range:'6-10'}
@@ -900,6 +935,22 @@ function cancel(){
   document.getElementById('timer-bar').classList.remove('on');
   rstWk();rstRest();
 }
+// ── CARDIO ─────────────────────────────────────────────────────────────
+let curCI='';
+function setCI(v){
+  curCI=curCI===v?'':v;
+  ['low','med','high'].forEach(k=>{
+    const b=document.getElementById('ci-'+k);
+    b.className='ci-btn'+(curCI===k?' on-'+k:'');
+  });
+}
+function resetCardio(){
+  document.getElementById('cardio-min').value='';
+  document.getElementById('cardio-type').value='';
+  curCI='';
+  ['low','med','high'].forEach(k=>document.getElementById('ci-'+k).className='ci-btn');
+}
+
 function save2(){
   const ms=getWkMs();const exercises=[];
   TPL[curMuscle].forEach(g=>g.ex.forEach(e=>{
@@ -911,8 +962,11 @@ function save2(){
     if(sets.length)exercises.push({name,group:g.g,type,sets});
   }));
   if(!exercises.length)return;
-  wks.unshift({id:Date.now(),name:curMuscle,muscle:curMuscle,date:curDate,exercises,dur:Math.floor(ms/1000)});
-  sv();cancel();renderStats();
+  const cardioMin=parseInt(document.getElementById('cardio-min').value)||0;
+  const cardioType=document.getElementById('cardio-type').value.trim();
+  const cardio=cardioMin>0?{min:cardioMin,type:cardioType||null,intensity:curCI||null}:null;
+  wks.unshift({id:Date.now(),name:curMuscle,muscle:curMuscle,date:curDate,exercises,dur:Math.floor(ms/1000),cardio});
+  resetCardio();sv();cancel();renderStats();
 }
 
 // ── LAST WORKOUT BANNER ────────────────────────────────────────────────
@@ -983,7 +1037,7 @@ function renderHist(){
         <div><div class="wname">${w.muscle}</div><div class="wdate">${fmt(w.date)}</div></div>
         <button class="btn btn-del" onclick="openDel('wk',${w.id})">Excluir</button>
       </div>
-      <div class="wtags"><span class="wtag hl">${w.muscle}</span><span class="wtag">${w.exercises.length} ex.</span><span class="wtag">${sc} séries</span><span class="wtag">⏱ ${dur}</span></div>
+      <div class="wtags"><span class="wtag hl">${w.muscle}</span><span class="wtag">${w.exercises.length} ex.</span><span class="wtag">${sc} séries</span><span class="wtag">⏱ ${dur}</span>${w.cardio?`<span class="wtag" style="color:var(--bl)">🫀 ${w.cardio.min}min${w.cardio.intensity?' · '+{low:'Leve',med:'Média',high:'Alta'}[w.cardio.intensity]:''}${w.cardio.type?' · '+w.cardio.type:''}</span>`:''}</div>
       ${exb}
     </div>`;
   }).join('');
