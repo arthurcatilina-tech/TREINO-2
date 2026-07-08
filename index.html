@@ -428,11 +428,11 @@ select.hsel{background:var(--bg2);border:1px solid var(--bd);border-radius:var(-
     <h2>Histórico</h2>
     <select class="hsel" id="hf" onchange="renderHist()">
       <option value="">Todos</option>
-      <option>Upper A</option>
       <option>Lower A</option>
-      <option>Upper B</option>
+      <option>Upper A</option>
       <option>Lower B</option>
-      <option>Ombros + Braços</option>
+      <option>Upper B</option>
+      <option>Ombro + Lower</option>
     </select>
   </div>
   <div id="hlist"></div>
@@ -509,6 +509,22 @@ const PRIORITY_EX=new Set([
 // type: 'normal' | 'passada'
 // range: string hint como "4-8", "6-10" etc
 const TPL={
+  'Lower A':[
+    {g:'Quadríceps',ex:[
+      {name:'Agachamento livre',type:'normal',range:'4-8'},
+      {name:'Leg press',type:'normal',range:'8-12'}
+    ]},
+    {g:'Posterior',ex:[
+      {name:'Stiff',type:'normal',range:'6-10'},
+      {name:'Mesa flexora',type:'normal',range:'8-12'}
+    ]},
+    {g:'Abdutores',ex:[
+      {name:'Abdução',type:'normal',range:'12-15'}
+    ]},
+    {g:'Panturrilha',ex:[
+      {name:'Panturrilha em pé',type:'normal',range:'8-15'}
+    ]}
+  ],
   'Upper A':[
     {g:'Peito',ex:[
       {name:'Supino reto barra',type:'normal',range:'4-8'}
@@ -527,20 +543,20 @@ const TPL={
       {name:'Rosca direta barra W',type:'normal',range:'6-10'}
     ]}
   ],
-  'Lower A':[
+  'Lower B':[
     {g:'Quadríceps',ex:[
-      {name:'Agachamento livre',type:'normal',range:'4-8'},
-      {name:'Leg press',type:'normal',range:'8-12'}
+      {name:'Cadeira extensora',type:'normal',range:'10-15'},
+      {name:'Passada',type:'passada',range:'10-12'}
     ]},
     {g:'Posterior',ex:[
-      {name:'Stiff',type:'normal',range:'6-10'},
-      {name:'Mesa flexora',type:'normal',range:'8-12'}
+      {name:'Terra romeno',type:'normal',range:'8-12'},
+      {name:'Flexora sentada',type:'normal',range:'10-15'}
     ]},
-    {g:'Abdutores',ex:[
-      {name:'Abdução',type:'normal',range:'12-15'}
+    {g:'Adutores',ex:[
+      {name:'Adução',type:'normal',range:'12-15'}
     ]},
     {g:'Panturrilha',ex:[
-      {name:'Panturrilha em pé',type:'normal',range:'8-15'}
+      {name:'Panturrilha sentada',type:'normal',range:'10-20'}
     ]}
   ],
   'Upper B':[
@@ -562,44 +578,31 @@ const TPL={
       {name:'Rosca inclinada',type:'normal',range:'8-12'}
     ]}
   ],
-  'Lower B':[
-    {g:'Quadríceps',ex:[
-      {name:'Cadeira extensora',type:'normal',range:'10-15'},
-      {name:'Passada',type:'passada',range:'10-12'}
-    ]},
-    {g:'Posterior',ex:[
-      {name:'Terra romeno',type:'normal',range:'8-12'},
-      {name:'Flexora sentada',type:'normal',range:'10-15'}
-    ]},
-    {g:'Adutores',ex:[
-      {name:'Adução',type:'normal',range:'12-15'}
-    ]},
-    {g:'Panturrilha',ex:[
-      {name:'Panturrilha sentada',type:'normal',range:'10-20'}
-    ]}
-  ],
-  'Ombros + Braços':[
+  'Ombro + Lower':[
     {g:'Ombros',ex:[
       {name:'Desenvolvimento máquina',type:'normal',range:'8-12'},
       {name:'Elevação lateral',type:'normal',range:'12-15'}
     ]},
-    {g:'Bíceps',ex:[
-      {name:'Rosca Scott',type:'normal',range:'8-12'},
-      {name:'Rosca martelo',type:'normal',range:'8-12'}
+    {g:'Quadríceps',ex:[
+      {name:'Hack Squat',type:'normal',range:'8-12'},
+      {name:'Bulgarian Split Squat',type:'normal',range:'8-12'},
+      {name:'Cadeira extensora unilateral',type:'normal',range:'10-15'}
     ]},
-    {g:'Tríceps',ex:[
-      {name:'Tríceps corda',type:'normal',range:'10-15'},
-      {name:'Tríceps testa',type:'normal',range:'8-12'}
+    {g:'Posterior',ex:[
+      {name:'Mesa flexora unilateral',type:'normal',range:'10-15'}
+    ]},
+    {g:'Panturrilha',ex:[
+      {name:'Panturrilha em pé ou sentada',type:'normal',range:'10-15'}
     ]}
   ]
 };
 
 const DAY_META={
-  'Upper A':{day:'SEG',icon:'💪',sub:'Peito · Costas · Ombros · Braços'},
-  'Lower A':{day:'TER',icon:'🦵',sub:'Quadríceps · Posterior · Panturrilha'},
-  'Upper B':{day:'QUA',icon:'🔝',sub:'Peito · Costas · Ombros · Braços'},
-  'Lower B':{day:'QUI',icon:'🦶',sub:'Quadríceps · Posterior · Panturrilha'},
-  'Ombros + Braços':{day:'SEX',icon:'💪',sub:'Ombros · Bíceps · Tríceps'}
+  'Lower A':{day:'SEG',icon:'🦵',sub:'Quadríceps · Posterior · Panturrilha'},
+  'Upper A':{day:'TER',icon:'💪',sub:'Peito · Costas · Ombros · Braços'},
+  'Lower B':{day:'QUA',icon:'🦶',sub:'Quadríceps · Posterior · Panturrilha'},
+  'Upper B':{day:'QUI',icon:'🔝',sub:'Peito · Costas · Ombros · Braços'},
+  'Ombro + Lower':{day:'SEX',icon:'🦵',sub:'Ombros · Quadríceps · Posterior · Panturrilha'}
 };
 
 let wks=[],bwLog=[],curMuscle='',curDate='',curSets={};
@@ -976,7 +979,7 @@ function save2(){
 }
 
 // ── LAST WORKOUT BANNER ────────────────────────────────────────────────
-const WORKOUT_ORDER=['Upper A','Lower A','Upper B','Lower B','Ombros + Braços'];
+const WORKOUT_ORDER=['Lower A','Upper A','Lower B','Upper B','Ombro + Lower'];
 function nextWorkout(name){
   const i=WORKOUT_ORDER.indexOf(name);
   if(i===-1)return'—';
