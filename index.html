@@ -259,29 +259,12 @@ select.hsel{background:var(--bg2);border:1px solid var(--bd);border-radius:var(-
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
 .blink{animation:blink 1s ease-in-out infinite}
 
-/* LAST WORKOUT BANNER */
-#last-wk-banner{display:none;background:var(--bg1);border:1px solid var(--bd);border-radius:var(--r);padding:14px 16px;margin-bottom:20px;position:relative;overflow:hidden}
-#last-wk-banner::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:linear-gradient(180deg,var(--ac),var(--ac2))}
-.lwb-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
-.lwb-lbl{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--mt);margin-bottom:4px}
-.lwb-name{font-family:var(--font-disp);font-size:22px;letter-spacing:.04em;color:var(--txt);line-height:1}
-.lwb-date{font-size:11px;font-family:var(--mono);color:var(--mt);margin-top:2px}
-.lwb-right{text-align:right;flex-shrink:0}
-.lwb-next-lbl{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--gn);margin-bottom:3px}
-.lwb-next{font-size:13px;font-weight:600;color:var(--gn)}
-.lwb-pills{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
-.lwb-pill{font-size:10px;font-weight:500;padding:3px 9px;border-radius:20px;background:rgba(255,77,28,.1);color:var(--ac);border:1px solid rgba(255,77,28,.2)}
-
 /* DCARD STATES */
-.dcard.dcard-last{border-color:rgba(255,77,28,.4);background:rgba(255,77,28,.05)}
-.dcard.dcard-next{border-color:rgba(0,201,122,.45);background:rgba(0,201,122,.05)}
-.dcard-status{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px;letter-spacing:.07em;text-transform:uppercase;margin-top:5px}
-.dcard-status-last{background:rgba(255,77,28,.12);color:var(--ac);border:1px solid rgba(255,77,28,.25)}
-.dcard-status-next{background:rgba(0,201,122,.12);color:var(--gn);border:1px solid rgba(0,201,122,.25)}
-.dcard-last-meta{font-size:10px;color:var(--mt);margin-top:2px;font-family:var(--mono)}
 </style>
 </head>
 <body>
+
+<div id="toast-wrap" style="position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none"></div>
 
 <div class="nav">
   <div class="nav-top">
@@ -324,20 +307,6 @@ select.hsel{background:var(--bg2);border:1px solid var(--bd);border-radius:var(-
 
 <!-- LOG -->
 <div class="pg on" id="pg-log">
-  <div id="last-wk-banner">
-    <div class="lwb-top">
-      <div>
-        <div class="lwb-lbl">Último treino</div>
-        <div class="lwb-name" id="lwb-name">—</div>
-        <div class="lwb-date" id="lwb-date">—</div>
-      </div>
-      <div class="lwb-right">
-        <div class="lwb-next-lbl">Próximo</div>
-        <div class="lwb-next" id="lwb-next">—</div>
-      </div>
-    </div>
-    <div class="lwb-pills" id="lwb-pills"></div>
-  </div>
   <div class="srow" id="stats"></div>
   <div id="s1">
     <div class="slbl">Escolha o treino</div>
@@ -534,7 +503,8 @@ const TPL={
       {name:'Remada em pé',type:'normal',range:'8-12'}
     ]},
     {g:'Ombros',ex:[
-      {name:'Desenvolvimento halteres',type:'normal',range:'6-10'}
+      {name:'Desenvolvimento halteres',type:'normal',range:'6-10'},
+      {name:'Elevação lateral',type:'normal',range:'10-15'}
     ]},
     {g:'Tríceps',ex:[
       {name:'Tríceps testa na polia',type:'normal',range:'8-12'}
@@ -568,7 +538,6 @@ const TPL={
       {name:'Remada baixa unilateral',type:'normal',range:'10-12'}
     ]},
     {g:'Ombros',ex:[
-      {name:'Elevação lateral',type:'normal',range:'10-15'},
       {name:'Crucifixo invertido',type:'normal',range:'12-15'}
     ]},
     {g:'Tríceps',ex:[
@@ -734,8 +703,31 @@ function playBeep(){
   }catch(e){}
 }
 
+// ── TOAST ──────────────────────────────────────────────────────────────
+function toast(msg,type){
+  const wrap=document.getElementById('toast-wrap');
+  const el=document.createElement('div');
+  const bg=type==='error'?'#e5484d':(type==='ok'?'#2ecc71':'#333');
+  el.style.cssText=`background:${bg};color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,.3);max-width:88vw;text-align:center`;
+  el.textContent=msg;
+  wrap.appendChild(el);
+  setTimeout(()=>{el.style.transition='opacity .3s';el.style.opacity='0';setTimeout(()=>el.remove(),300);},type==='error'?4500:2200);
+}
+
 // ── STORAGE ────────────────────────────────────────────────────────────
-function sv(){try{localStorage.setItem(SK,JSON.stringify({wks,bwLog}))}catch(e){}}
+// sv() persiste no localStorage E confere lendo de volta, para nunca falhar em silêncio.
+function sv(){
+  try{
+    const payload=JSON.stringify({wks,bwLog});
+    localStorage.setItem(SK,payload);
+    const check=localStorage.getItem(SK);
+    if(check!==payload)throw new Error('Verificação de escrita falhou');
+    return true;
+  }catch(e){
+    console.error('Falha ao salvar no localStorage:',e);
+    return false;
+  }
+}
 function ld(){try{const r=localStorage.getItem(SK);if(r){const d=JSON.parse(r);wks=d.wks||[];bwLog=d.bwLog||[];}}catch(e){wks=[];bwLog=[];}}
 
 // ── NAV ────────────────────────────────────────────────────────────────
@@ -756,27 +748,12 @@ function showPg(id,btn){
 // ── DAY GRID ───────────────────────────────────────────────────────────
 function renderDayGrid(){
   const grid=document.getElementById('day-grid');
-  const lastWk=wks.length?wks[0]:null;
-  const lastName=lastWk?lastWk.muscle:'';
-  const nextName=lastName?nextWorkout(lastName):'';
   grid.innerHTML=Object.keys(TPL).map(name=>{
     const m=DAY_META[name];
-    const isLast=name===lastName;
-    const isNext=name===nextName&&!isLast;
-    let extraClass=isLast?' dcard-last':isNext?' dcard-next':'';
-    let badge='';
-    if(isLast){
-      const dateStr=lastWk?fmt(lastWk.date):'';
-      const durStr=lastWk&&lastWk.dur?' · '+fmtDur(lastWk.dur):'';
-      badge=`<div class="dcard-status dcard-status-last">✓ Último${dateStr?' — '+dateStr+durStr:''}</div>`;
-    } else if(isNext){
-      badge=`<div class="dcard-status dcard-status-next">▶ Próximo sugerido</div>`;
-    }
-    return`<div class="dcard${extraClass}" onclick="go('${name}')">
+    return`<div class="dcard" onclick="go('${name}')">
       <div class="dcard-info">
         <div class="dcard-name">${name}</div>
         <div class="dcard-sub">${m.sub}</div>
-        ${badge}
       </div>
       <div class="dcard-arrow">›</div>
     </div>`;
@@ -961,40 +938,38 @@ function resetCardio(){
 }
 
 function save2(){
-  const ms=getWkMs();const exercises=[];
-  TPL[curMuscle].forEach(g=>g.ex.forEach(e=>{
-    const name=e.name,type=e.type;
-    const sets=(curSets[name]||[]).filter(s=>{
-      if(type==='passada')return s.indo||s.vindo;
-      return s.w||s.r;
-    });
-    if(sets.length)exercises.push({name,group:g.g,type,sets});
-  }));
-  if(!exercises.length)return;
-  const cardioMin=parseInt(document.getElementById('cardio-min').value)||0;
-  const cardioType=document.getElementById('cardio-type').value.trim();
-  const cardio=cardioMin>0?{min:cardioMin,type:cardioType||null,intensity:curCI||null}:null;
-  wks.unshift({id:Date.now(),name:curMuscle,muscle:curMuscle,date:curDate,exercises,dur:Math.floor(ms/1000),cardio});
-  resetCardio();sv();cancel();renderStats();
-}
-
-// ── LAST WORKOUT BANNER ────────────────────────────────────────────────
-const WORKOUT_ORDER=['Lower A','Upper A','Lower B','Upper B','Ombro + Lower'];
-function nextWorkout(name){
-  const i=WORKOUT_ORDER.indexOf(name);
-  if(i===-1)return'—';
-  return WORKOUT_ORDER[(i+1)%WORKOUT_ORDER.length];
-}
-function renderLastWorkout(){
-  const banner=document.getElementById('last-wk-banner');
-  if(!wks.length){banner.style.display='none';return;}
-  const last=wks[0]; // já ordenado por data desc (unshift no save)
-  banner.style.display='block';
-  document.getElementById('lwb-name').textContent=last.muscle;
-  document.getElementById('lwb-date').textContent=fmt(last.date)+(last.dur?' · '+fmtDur(last.dur):'');
-  document.getElementById('lwb-next').textContent=nextWorkout(last.muscle);
-  const muscleGroups=[...new Set(last.exercises.map(e=>e.group))];
-  document.getElementById('lwb-pills').innerHTML=muscleGroups.map(g=>`<span class="lwb-pill">${g}</span>`).join('');
+  try{
+    if(!TPL[curMuscle]){toast('Erro: treino inválido, nada foi salvo.','error');return;}
+    const ms=getWkMs();const exercises=[];
+    TPL[curMuscle].forEach(g=>g.ex.forEach(e=>{
+      const name=e.name,type=e.type;
+      const sets=(curSets[name]||[]).filter(s=>{
+        if(type==='passada')return s.indo||s.vindo;
+        return s.w||s.r;
+      });
+      if(sets.length)exercises.push({name,group:g.g,type,sets});
+    }));
+    if(!exercises.length){
+      toast('Nenhuma série preenchida — treino não foi salvo.','error');
+      return;
+    }
+    const cardioMin=parseInt(document.getElementById('cardio-min').value)||0;
+    const cardioType=document.getElementById('cardio-type').value.trim();
+    const cardio=cardioMin>0?{min:cardioMin,type:cardioType||null,intensity:curCI||null}:null;
+    wks.unshift({id:Date.now(),name:curMuscle,muscle:curMuscle,date:curDate,exercises,dur:Math.floor(ms/1000),cardio});
+    const ok=sv();
+    if(!ok){
+      // reverte para não deixar o treino "preso" só na memória, sem duplicar ao tentar de novo
+      wks.shift();
+      toast('Não foi possível salvar o treino. Tente de novo (verifique o espaço de armazenamento do navegador).','error');
+      return; // NÃO reseta a tela — os dados digitados continuam intactos para nova tentativa
+    }
+    resetCardio();cancel();renderStats();
+    toast('Treino salvo ✓','ok');
+  }catch(e){
+    console.error('Erro inesperado ao salvar treino:',e);
+    toast('Erro inesperado ao salvar o treino. Os dados não foram perdidos — tente salvar novamente.','error');
+  }
 }
 
 // ── STATS ──────────────────────────────────────────────────────────────
@@ -1016,7 +991,6 @@ function renderStats(){
     <div class="sc"><div class="sl">Semana</div><div class="sv">${wk}</div><div class="ss2">treinos</div></div>
     <div class="sc"><div class="sl">Carga máx</div><div class="sv">${mx.length?Math.max(...mx):0}kg</div><div class="ss2">qualquer ex.</div></div>
     <div class="sc"><div class="sl">PRs</div><div class="sv" style="color:var(--gn)">${totalPRs}</div><div class="ss2">recordes</div></div>`;
-  renderLastWorkout();
 }
 
 // ── HISTORY ────────────────────────────────────────────────────────────
